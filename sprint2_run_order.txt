@@ -1,0 +1,16 @@
+Sprint 2 Run Order
+
+1. Re-run parsing and generate phishing-specific features:
+python apply_parsing.py
+
+2. Rebuild TF-IDF features:
+python feature_extraction.py
+
+3. Retrain the ML model:
+python train_model.py
+
+4. Create the SQLite database:
+python init_db.py
+
+5. Test live predictions and database storage:
+python predict_local.py
