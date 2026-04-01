@@ -1,67 +1,12 @@
 # ============================================================
-# predict_local.py
-#
-# This script allows a user to manually test email text against
-# the phishing detection system.
-#
-# PURPOSE:
-#   1. Load the trained machine learning model
-#   2. Load the saved TF-IDF vectorizer
-#   3. Accept user email text input
-#   4. Apply autocorrect and text cleaning
-#   5. Extract phishing rule-based features
-#   6. Run the machine learning classifier
-#   7. Calculate a phishing risk score
-#   8. Save the result to SQLite for logging/auditing
-#
-# OUTPUT:
-#   - Prediction label
-#   - Confidence score
-#   - Risk score
-#   - Rule-based phishing reasons
-#   - Saved database record
-#
-# This is the main Sprint 2 demo script.
+# LOCAL PREDICTION (FINAL - TUNED + CONSISTENT)
 # ============================================================
 
 import pickle
-
-# ------------------------------------------------------------
-# Import parsing functions
-#
-# These functions handle:
-#   - text cleanup
-#   - phishing feature extraction
-#   - explanation generation
-#   - risk scoring
-# ------------------------------------------------------------
-
-from parsing import (
-    autocorrect_text,
-    clean_text,
-    extract_rule_features,
-    get_flag_reasons,
-    calculate_risk_score,
-)
-
-# ------------------------------------------------------------
-# Import database functions
-#
-# These functions create the database table (if needed)
-# and store scan results.
-# ------------------------------------------------------------
-
+from parsing import clean_text, extract_rule_features, calculate_risk_score
 from database import create_table, save_scan_result
 
-
-# ------------------------------------------------------------
-# STEP 1: Load machine learning model and vectorizer
-#
-# model.pkl was created in train_model.py
-# vectorizer.pkl was created in feature_extraction.py
-# ------------------------------------------------------------
-
-print("Loading model and vectorizer...")
+print("Loading model...")
 
 with open("model.pkl", "rb") as f:
     model = pickle.load(f)
@@ -69,174 +14,153 @@ with open("model.pkl", "rb") as f:
 with open("data/vectorizer.pkl", "rb") as f:
     vectorizer = pickle.load(f)
 
-# ------------------------------------------------------------
-# STEP 2: Ensure the SQLite database table exists
-#
-# If the table is not already created, this will create it.
-# ------------------------------------------------------------
-
 create_table()
 
-print("Model, vectorizer, and database loaded successfully.")
-
-
-# ------------------------------------------------------------
-# STEP 3: Start user input loop
-#
-# The user can continuously test emails until they type "exit".
-# ------------------------------------------------------------
+print("System ready.")
 
 while True:
-    text = input("\nEnter an email to test (or type 'exit'): ")
+    text = input("\nEnter an email (or type 'exit'): ")
 
-    # Exit condition
     if text.lower() == "exit":
         break
 
-    # --------------------------------------------------------
-    # STEP 4: Generate preprocessing versions of the text
-    #
-    # autocorrected_text:
-    #   fixes phishing-style typos and obfuscation
-    #
-    # cleaned_text:
-    #   text version prepared for TF-IDF vectorization
-    # --------------------------------------------------------
-
-    autocorrected = autocorrect_text(text)
+    # ==============================
+    # CLEAN + VECTORIZE
+    # ==============================
     cleaned = clean_text(text)
+    X = vectorizer.transform([cleaned])
 
-    # Convert cleaned text into TF-IDF feature vector
-    features = vectorizer.transform([cleaned])
+    prediction = model.predict(X)[0]
+    probs = model.predict_proba(X)[0]
+    confidence = float(max(probs))
 
-    # --------------------------------------------------------
-    # STEP 5: Run machine learning prediction
-    #
-    # prediction:
-    #   1 = phishing
-    #   0 = legitimate
-    #
-    # confidence:
-    #   highest probability from model output
-    # --------------------------------------------------------
+    f = extract_rule_features(text)
 
-    prediction = model.predict(features)[0]
-    probability = model.predict_proba(features)[0]
-    confidence = float(max(probability))
+    # ==============================
+    # BASE RISK
+    # ==============================
+    risk = calculate_risk_score(confidence, prediction, f)
 
-    # --------------------------------------------------------
-    # STEP 6: Run rule-based phishing detection
-    #
-    # These are explicit phishing rules, separate from ML.
-    # --------------------------------------------------------
+    # ==============================
+    # 🔥 FINAL TUNED RISK BOOSTS
+    # ==============================
 
-    rule_features = extract_rule_features(text)
+    # HIGH RISK
+    if f["asks_for_credentials"]:
+        risk += 30
 
-    # Get readable explanations such as:
-    #   "Contains URL or domain"
-    #   "Uses urgent language"
-    reasons = get_flag_reasons(rule_features)
+    # SPOOFED DOMAIN (important)
+    if f["advanced_domain_flag"] == 1:
+        risk += 20
 
-    # --------------------------------------------------------
-    # STEP 7: Calculate risk score
-    #
-    # This combines:
-    #   - ML confidence
-    #   - phishing rule features
-    #
-    # Final score is from 0 to 100.
-    # --------------------------------------------------------
+    # WEAK DOMAIN (reduced)
+    if f["advanced_domain_flag"] == 2:
+        risk += 3
 
-    risk_score = calculate_risk_score(confidence, int(prediction), rule_features)
+    # SOCIAL ENGINEERING
+    if f["social_engineering_score"] >= 2:
+        risk += 8
 
-    # --------------------------------------------------------
-    # STEP 8: Handle very short / meaningless input
-    #
-    # Example:
-    #   "ts"
-    #   ""
-    #
-    # These should not be treated as serious phishing detections.
-    # --------------------------------------------------------
+    # Moderate data request (FINAL FIX)
+    if f["data_exfiltration_score"] == 1:
+        risk += 15   
 
-    cleaned_word_count = len(cleaned.split())
+    # Strong data exfiltration
+    if f["data_exfiltration_score"] >= 2:
+        risk += 20   
 
-    # Count how many strong phishing rules are active
-    suspicious_rule_count = sum([
-        rule_features["has_url"],
-        rule_features["has_urgent_words"],
-        rule_features["asks_for_credentials"],
-        rule_features["has_click_language"],
-        1 if rule_features["typo_suspicion_score"] >= 2 else 0,
-        rule_features["brand_impersonation"],
-        rule_features["subdomain_phishing"],
-        rule_features["homoglyph_attack"],
-        rule_features["suspicious_tld"],
-    ])
+    # URGENCY
+    if f["has_urgent_words"]:
+        risk += 5
 
-    # Decision logic
-    if cleaned_word_count < 3 and suspicious_rule_count == 0:
-        label = "Insufficient content"
-        risk_score = min(risk_score, 20)
+    # GENERIC UNTRUSTED URL
+    if f["has_url"] and not f["trusted_url"]:
+        risk += 5
 
-    elif prediction == 1 and suspicious_rule_count == 0 and cleaned_word_count < 5:
-        label = "Insufficient content"
-        risk_score = min(risk_score, 25)
+    # Clamp risk
+    risk = max(0, min(risk, 100))
 
-    elif prediction == 0 and suspicious_rule_count >= 3:
-        # Rule-based escalation:
-        # even if model says legitimate, enough phishing rules
-        # can override it
-        label = "Phishing (rule-escalated)"
+    # ==============================
+    # 🔥 LEGIT BUSINESS CONTEXT REDUCTION (FINAL FIX)
+    # ==============================
 
+    # If no strong phishing indicators, reduce risk slightly
+    if (
+        not f["has_url"]
+        and not f["asks_for_credentials"]
+        and f["data_exfiltration_score"] <= 1
+        and f["social_engineering_score"] <= 1
+    ):
+        risk -= 5
+
+    # ==============================
+    # FINAL LABEL
+    # ==============================
+    if risk >= 70:
+        label = "Phishing"
+    elif risk >= 40:
+        label = "Suspicious"
     else:
-        label = "Phishing" if prediction == 1 else "Legitimate"
+        label = "Legitimate"
 
-    # --------------------------------------------------------
-    # STEP 9: Convert reasons into a single readable string
-    # --------------------------------------------------------
+    # ==============================
+    # REASONS
+    # ==============================
+    reasons = []
 
-    flag_reason_text = "; ".join(reasons) if reasons else "No major phishing flags detected"
+    if f["asks_for_credentials"]:
+        reasons.append("This email requests sensitive information such as login credentials.")
 
-    # --------------------------------------------------------
-    # STEP 10: Build result dictionary
-    #
-    # This is what gets saved to the database.
-    # --------------------------------------------------------
+    if f["advanced_domain_flag"] == 1:
+        reasons.append("The link appears to impersonate a trusted service but uses a suspicious domain.")
 
-    result = {
+    if f["advanced_domain_flag"] == 2:
+        reasons.append("The link uses an uncommon or low-trust domain.")
+
+    if f["social_engineering_score"] >= 2:
+        reasons.append("The message uses social engineering techniques to manipulate the recipient.")
+
+    if f["data_exfiltration_score"] >= 2:
+        reasons.append("The email requests potentially sensitive data.")
+
+    if f["has_urgent_words"]:
+        reasons.append("The message uses urgency to pressure immediate action.")
+
+    if f["has_url"] and not f["trusted_url"]:
+        reasons.append("The email contains a link from an untrusted domain.")
+
+    # 🔥 CLEAN LEGIT MESSAGE FIX
+    if not reasons:
+        if label == "Legitimate":
+            reasons.append("No phishing indicators were detected in this email.")
+        else:
+            reasons.append("This email was flagged based on learned patterns from the detection model.")
+
+    reason_text = "; ".join(reasons)
+
+    # ==============================
+    # OUTPUT
+    # ==============================
+    print("\n--- RESULT ---")
+    print("Prediction:", label)
+    print("Confidence:", round(confidence, 4))
+    print("Risk Score:", risk)
+    print("Reasons:", reason_text)
+
+    # ==============================
+    # SAVE
+    # ==============================
+    save_scan_result({
         "original_text": text,
-        "autocorrected_text": autocorrected,
+        "autocorrected_text": cleaned,
         "cleaned_text": cleaned,
         "prediction_label": label,
-        "model_confidence": round(confidence, 4),
-        "risk_score": risk_score,
-        "has_url": rule_features["has_url"],
-        "has_urgent_words": rule_features["has_urgent_words"],
-        "asks_for_credentials": rule_features["asks_for_credentials"],
-        "suspicious_symbol_count": rule_features["suspicious_symbol_count"],
-        "uppercase_ratio": round(rule_features["uppercase_ratio"], 4),
-        "flag_reasons": flag_reason_text,
-    }
-
-    # --------------------------------------------------------
-    # STEP 11: Save scan result to SQLite database
-    # --------------------------------------------------------
-
-    save_scan_result(result)
-
-    # --------------------------------------------------------
-    # STEP 12: Print output to user
-    #
-    # This is the terminal output shown in the demo.
-    # --------------------------------------------------------
-
-    print("\nAutocorrected Text:")
-    print(autocorrected[:300])
-
-    print("\nPrediction:", label)
-    print("Confidence:", round(confidence, 4))
-    print("Risk Score:", risk_score, "/ 100")
-    print("Rule Features:", rule_features)
-    print("Flag Reasons:", flag_reason_text)
-    print("Saved to database.")
+        "model_confidence": confidence,
+        "risk_score": risk,
+        "has_url": f["has_url"],
+        "has_urgent_words": f["has_urgent_words"],
+        "asks_for_credentials": f["asks_for_credentials"],
+        "suspicious_symbol_count": 0,
+        "uppercase_ratio": 0,
+        "flag_reasons": reason_text,
+    })

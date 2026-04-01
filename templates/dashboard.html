@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Email Threat Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="container">
+
+    <h1>🔐 Email Threat Dashboard</h1>
+
+    <!-- SEARCH -->
+    <input type="text" class="search" placeholder="Search emails..." id="searchInput" onkeyup="filterEmails()">
+
+    <!-- FILTERS -->
+    <div class="filters">
+        <button onclick="filterType('all')">All</button>
+        <button onclick="filterType('Phishing')">🔴 Phishing</button>
+        <button onclick="filterType('Suspicious')">🟡 Suspicious</button>
+        <button onclick="filterType('Legitimate')">🟢 Legitimate</button>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-wrapper">
+        <table id="emailTable">
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Risk</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for email in emails %}
+                <tr data-label="{{ email.label }}" onclick="window.location='/email/{{ email.id }}'">
+
+                    <td class="email-cell">
+                        <div class="email-content">
+
+                            <!-- ORB -->
+                            <div class="orb 
+                                {% if email.label == 'Phishing' %}orb-red
+                                {% elif email.label == 'Suspicious' %}orb-yellow
+                                {% else %}orb-green
+                                {% endif %}
+                            "></div>
+
+                            <!-- TEXT -->
+                            <span class="email-text">
+                                {{ email.text }}
+                            </span>
+
+                        </div>
+                    </td>
+
+                    <!-- RISK -->
+                    <td class="
+                        {% if email.risk >= 80 %}critical
+                        {% elif email.risk >= 60 %}high
+                        {% elif email.risk >= 40 %}medium
+                        {% else %}low
+                        {% endif %}
+                    ">
+                        {{ email.risk }}
+                    </td>
+
+                    <!-- STATUS -->
+                    <td class="status">
+                        {{ email.label }}
+                    </td>
+
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<script>
+let currentFilter = "all";
+
+function filterType(type) {
+    currentFilter = type;
+    applyFilters();
+}
+
+function filterEmails() {
+    applyFilters();
+}
+
+function applyFilters() {
+    const input = document.getElementById("searchInput").value.toLowerCase();
+    const rows = document.querySelectorAll("#emailTable tbody tr");
+
+    rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        const label = row.getAttribute("data-label");
+
+        const matchesSearch = text.includes(input);
+        const matchesFilter = (currentFilter === "all" || label === currentFilter);
+
+        row.style.display = (matchesSearch && matchesFilter) ? "" : "none";
+    });
+}
+</script>
+
+</body>
+</html>

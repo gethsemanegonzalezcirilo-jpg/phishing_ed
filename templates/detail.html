@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Email Analysis</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="analysis-container">
+
+    <h1>📧 Email Analysis</h1>
+
+    <!-- TOP CARDS -->
+    <div class="top-cards">
+        <div class="card">
+            <span class="label">Date</span>
+            <span class="value">{{ email.date }}</span>
+        </div>
+
+        <div class="card">
+            <span class="label">Risk Score</span>
+            <span class="value">{{ email.risk }}</span>
+        </div>
+
+        <div class="card">
+            <span class="label">Classification</span>
+            <span class="badge {{ email.label|lower }}">
+                {{ email.label }}
+            </span>
+        </div>
+    </div>
+
+    <!-- WHY FLAGGED -->
+    <div class="section">
+        <button class="dropdown-btn" onclick="toggleSection('reasons')">
+            🚨 Why This Was Flagged
+        </button>
+
+        <div id="reasons" class="dropdown-content open">
+            <ul class="reasons-list">
+                {% for reason in email.reasons.split(';') %}
+                    <li>{{ reason }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- EMAIL CONTENT -->
+    <div class="section">
+        <button class="dropdown-btn" onclick="toggleSection('content')">
+            📄 Email Content
+        </button>
+
+        <div id="content" class="dropdown-content email-box">
+            {{ email.text }}
+        </div>
+    </div>
+
+</div>
+
+<script>
+function toggleSection(id) {
+    document.getElementById(id).classList.toggle("open");
+}
+</script>
+
+</body>
+</html>

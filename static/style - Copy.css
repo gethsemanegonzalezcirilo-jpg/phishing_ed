@@ -1,0 +1,10 @@
+function searchTable() {
+    let input = document.querySelector(".search").value.toLowerCase();
+    let rows = document.querySelectorAll("#emailTable tr");
+
+    rows.forEach((row, i) => {
+        if (i === 0) return;
+        row.style.display = row.innerText.toLowerCase().includes(input)
+            ? "" : "none";
+    });
+}

@@ -1,0 +1,225 @@
+/* ===== GLOBAL ===== */
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #0f172a;
+    color: white;
+    margin: 0;
+}
+
+/* ===== CONTAINER ===== */
+.analysis-container {
+    max-width: 1000px;
+    margin: auto;
+    padding: 30px;
+}
+
+h1 {
+    margin-bottom: 20px;
+}
+
+/* ===== TOP CARDS ===== */
+.top-cards {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.card {
+    flex: 1;
+    background: #1e293b;
+    padding: 15px;
+    border-radius: 10px;
+}
+
+.label {
+    display: block;
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.value {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+/* ===== BADGES ===== */
+.badge {
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-weight: bold;
+    display: inline-block;
+}
+
+.badge.phishing {
+    background: #dc2626;
+    color: white;
+}
+
+.badge.suspicious {
+    background: #eab308;
+    color: black;
+}
+
+.badge.legitimate {
+    background: #22c55e;
+    color: white;
+}
+
+/* ===== SECTION SPACING ===== */
+.section {
+    margin-bottom: 20px;
+}
+
+/* ===== DROPDOWN BUTTON ===== */
+.dropdown-btn {
+    width: 100%;
+    text-align: left;
+    background: #1e293b;
+    border: none;
+    padding: 12px;
+    font-size: 15px;
+    color: white;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: 0.2s;
+}
+
+.dropdown-btn:hover {
+    background: #334155;
+}
+
+/* ===== DROPDOWN CONTENT ===== */
+.dropdown-content {
+    display: none;
+    background: #020617;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 8px;
+}
+
+.dropdown-content.open {
+    display: block;
+}
+
+/* ===== EMAIL BOX ===== */
+.email-box {
+    white-space: pre-wrap;
+    line-height: 1.6;
+    font-size: 14px;
+}
+
+/* ===== REASONS ===== */
+.reasons-list {
+    padding-left: 20px;
+}
+
+.reasons-list li {
+    margin-bottom: 8px;
+}
+
+/* ===== CONTAINER ===== */
+.container {
+    width: 85%;
+    margin: auto;
+    margin-top: 40px;
+}
+
+/* SEARCH */
+.search {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    border-radius: 6px;
+    border: none;
+}
+
+/* FILTER BUTTONS */
+.filters {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.filters button {
+    padding: 8px 12px;
+    margin: 5px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    background: #334155;
+    color: white;
+}
+
+.filters button:hover {
+    background: #475569;
+}
+
+/* ===== TABLE ===== */
+.table-wrapper {
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #1e293b;
+}
+
+th {
+    background: #334155;
+    padding: 14px;
+    text-align: left;
+}
+
+td {
+    padding: 14px;
+    border-bottom: 1px solid #475569;
+}
+
+tr:hover {
+    background: #334155;
+    cursor: pointer;
+}
+
+/* EMAIL CELL */
+.email-cell {
+    max-width: 600px;
+}
+
+.email-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* TEXT TRUNCATION */
+.email-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 550px;
+}
+
+/* ===== ORBS ===== */
+.orb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.orb-red { background: #ef4444; }
+.orb-yellow { background: #eab308; }
+.orb-green { background: #22c55e; }
+
+/* ===== RISK COLORS ===== */
+.low { color: #22c55e; font-weight: bold; }
+.medium { color: #eab308; font-weight: bold; }
+.high { color: #f97316; font-weight: bold; }
+.critical { color: #ef4444; font-weight: bold; }
+
+/* STATUS */
+.status {
+    font-weight: bold;
+}
